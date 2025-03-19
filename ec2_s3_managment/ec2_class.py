@@ -3,7 +3,7 @@ import os
 import time
 from ec2_s3_managment.ec2_s3_constants import KEY_DIR, INSTANCE_AMI, SECURITY_GROUP_NAME, DESCIPTION, EC2_KEY_NAME
 
-class Ec2Manager:
+class Ec2S3Manager:
     def __init__(self):
         self.ec2_client = boto3.client('ec2')
     

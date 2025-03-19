@@ -1,5 +1,5 @@
 EC2_KEY_NAME = "jankoioi"
-KEY_DIR = "ec2_managment"
+KEY_DIR = "ec2_s3_managment"
 INSTANCE_AMI = "ami-08b5b3a93ed654d19"
 
 SECURITY_GROUP_NAME = "jankoioi_security"
