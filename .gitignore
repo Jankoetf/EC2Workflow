@@ -7,3 +7,6 @@ __pycache__/
 # Virtual environment
 my_virtual_environment/
 .venv/
+
+#ec2 key pair
+*.pem

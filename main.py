@@ -8,4 +8,4 @@ def test_ec2_class():
 
 if __name__ == "__main__":
     print("main")
-    #test_ec2_class()
+    test_ec2_class()

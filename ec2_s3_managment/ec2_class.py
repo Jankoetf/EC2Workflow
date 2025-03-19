@@ -13,6 +13,7 @@ class Ec2S3Manager:
         file = open(f"{KEY_DIR}/{EC2_KEY_NAME}.pem", "w")
         file.write(resp["KeyMaterial"])
         file.close()
+        print("new key pair created")
 
     def __check_if_key_pair_exists(self):
         # checking if key-pair already exist
@@ -33,6 +34,7 @@ class Ec2S3Manager:
                 return
             else:
                 self.ec2_client.delete_key_pair(KeyName=EC2_KEY_NAME)
+                print("old key pair deleted")
                 self.__create_new_key_pair()
         else:
             self.__create_new_key_pair()
