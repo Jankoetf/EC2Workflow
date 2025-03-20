@@ -1,0 +1,27 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# virtual env
+my_virtual_environment/
+.venv/
+env/
+venv/
+
+# VS Code
+.vscode/
+
+# EC2 key
+*.pem
+
+# Git
+.git/
+.gitignore
+
+# Local
+logger_output/
+LocalOutput/
+TestFiles/
