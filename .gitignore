@@ -13,3 +13,6 @@ my_virtual_environment/
 
 #env
 .env
+
+#logger_output
+logger_output
