@@ -55,7 +55,18 @@ class Ec2ManagerClass:
                         'VolumeSize':20
                     }
                 }
-            ]
+            ],
+            TagSpecifications=[
+                {
+                    'ResourceType': 'instance',
+                    'Tags': [
+                        {
+                            'Key': 'Name',
+                            'Value': 'Model-Training-Instance'
+                        }
+                    ]
+                }
+            ],
         )
         instance_id = run_response["Instances"][0]["InstanceId"]
         # print("instance_id: ", instance_id)
