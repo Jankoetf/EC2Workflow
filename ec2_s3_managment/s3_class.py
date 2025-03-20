@@ -16,20 +16,20 @@ S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
 class S3ManagerClass:
     def __init__(self):
         self.s3_client = boto3.client('s3')
-        self.last_index, self.output_exists = self.get_max_output_index()
-        self.new_index = self.last_index + 1
-        
-        self.s3_upload_output_root = f"{S3_PREFIX}_{self.new_index}"
-        self.s3_download_output_root = f"{S3_PREFIX}_{self.last_index}" if self.output_exists else None
-
-        self.model_upload_path = self.s3_upload_output_root + f"/{MODEL_FILENAME}.joblib"
-        self.model_download_path = self.s3_upload_output_root + f"/{MODEL_FILENAME}.joblib"
-
-        self.metrics_upload_path = self.s3_upload_output_root + f"/{METRICS_FILENAME}.json"
-        self.metrics_upload_path = self.s3_upload_output_root + f"/{METRICS_FILENAME}.json"
-
-        self.logger_output_path = self.s3_upload_output_root + f"/{LOGGER_FILENAME}.log"
-        self.logger_output_path = self.s3_upload_output_root + f"/{LOGGER_FILENAME}.log"
+        self.download_index, self.download_possible = self.get_max_output_index()
+        self.upload_index = self.download_index + 1
+        self.s3_upload_root = f"{S3_PREFIX}_{self.upload_index}"
+        self.metrics_upload_path = self.s3_upload_root + f"/{METRICS_FILENAME}.json"
+        self.model_upload_path = self.s3_upload_root + f"/{MODEL_FILENAME}.joblib"
+        self.logger_upload_path = self.s3_upload_root + f"/{LOGGER_FILENAME}.log"
+        self.update_download_paths()
+    
+    def update_download_paths(self):
+        self.download_index, self.download_possible = self.get_max_output_index()
+        self.s3_download_root = f"{S3_PREFIX}_{self.download_index}" if self.download_possible else None
+        self.model_download_path = self.s3_download_root + f"/{MODEL_FILENAME}.joblib"
+        self.metrics_download_path = self.s3_download_root + f"/{METRICS_FILENAME}.json"
+        self.logger_download_path = self.s3_download_root + f"/{LOGGER_FILENAME}.log"
 
     def get_max_output_index(self):
         try:
@@ -56,12 +56,12 @@ class S3ManagerClass:
             print(f"Error listing root contents of the bucket: {e}")
             raise
 
-    def upload_single_file(self, local_file_path):
+    def upload_single_file(self, local_file_path, s3_path):
         try:
             self.s3_client.upload_file(
                 Filename=local_file_path,  #local path
                 Bucket=S3_BUCKET_NAME,  
-                Key=self.s3_output_root + "/" + local_file_path  # S3 path
+                Key=self.s3_upload_root + "/" + s3_path  # S3 path
             )
         except Exception as e:
             print(f"Error uploading file: {e}")
@@ -75,13 +75,13 @@ class S3ManagerClass:
             model_buffer.seek(0)  # Reset buffer position to beginning
             
             # Upload the model directly from memory to S3
-            logger.info(f"Uploading model to S3 bucket {S3_BUCKET_NAME}, key: {self.s3_output_root}/{MODEL_FILENAME}")
+            logger.info(f"Uploading model to S3 bucket {S3_BUCKET_NAME}, key: {self.s3_upload_root}/{MODEL_FILENAME}")
             self.s3_client.upload_fileobj(
                 model_buffer, 
                 S3_BUCKET_NAME, 
-                self.model_output_path
+                self.model_upload_path
             )
-            logger.info(f"Successfully uploaded to s3://{S3_BUCKET_NAME}/{self.s3_output_root}")
+            logger.info(f"Successfully uploaded to s3://{S3_BUCKET_NAME}/{self.s3_upload_root}")
         except Exception as e:
             print(f"Error uploading model to S3: {e}")
             return None
@@ -89,14 +89,14 @@ class S3ManagerClass:
     def upload_metrics_to_s3(self, metrics_dict):
         try:
             # Convert the metrics dictionary to a JSON string then to bytes
-            logger.info(f"Uploading metrics to S3 bucket {S3_BUCKET_NAME}, key: {self.metrics_output_path}")
+            logger.info(f"Uploading metrics to S3 bucket {S3_BUCKET_NAME}, key: {self.metrics_upload_path}")
             metrics_data = json.dumps(metrics_dict, indent=4).encode('utf-8')
             
             # Upload the metrics directly to S3
             self.s3_client.put_object(
                 Body=metrics_data,
                 Bucket=S3_BUCKET_NAME,
-                Key=self.metrics_output_path
+                Key=self.metrics_upload_path
             )
             logger.info(f"Uploading succesfull")
             
@@ -110,7 +110,7 @@ class S3ManagerClass:
             self.s3_client.upload_file(
                 LOGGER_OUT_PATH,
                 S3_BUCKET_NAME,
-                self.logger_output_path
+                self.logger_upload_path
             )
 
         except Exception as e:
@@ -119,15 +119,19 @@ class S3ManagerClass:
         
 
     def download_experiment_files_from_s3(self):
-        # Create the local folder if it doesn't exist
-        os.makedirs(LOCAL_OUTPUT_PATH, exist_ok=True)
+        self.update_download_paths()
+        if not self.download_possible:
+            print("no output file")
+            return
+        
+        os.makedirs(LOCAL_OUTPUT_PATH, exist_ok=True) # Create the local folder if it doesn't exist
         print("LOCAL_OUTPUT_PATH: ", LOCAL_OUTPUT_PATH)
+
         response = self.s3_client.list_objects_v2(
             Bucket=S3_BUCKET_NAME,
-            Prefix=self.s3_last_output_root
+            Prefix=self.s3_download_root
         )
-        os.makedirs(LOCAL_OUTPUT_PATH + "/" + S3_PREFIX + "_" + str(self.last_index), exist_ok=True)
-
+        os.makedirs(LOCAL_OUTPUT_PATH + "/" + S3_PREFIX + "_" + str(self.download_index), exist_ok=True)
 
         for obj in response['Contents']:
             # Get the S3 key (full path in S3)
@@ -148,15 +152,17 @@ class S3ManagerClass:
             )
 
     def __str__(self):
-        output_string = f"self.last_index: {self.last_index}\n"
-        output_string += f"self.output_exists: {self.output_exists}\n"
-        output_string += f"self.new_index: {self.new_index}\n"
-        output_string += f"self.s3_output_root: {self.s3_output_root}\n"
-        output_string += f"self.s3_last_output_root {self.s3_last_output_root}\n"
-        output_string += f"self.model_output_path: {self.model_output_path}\n"
-        output_string += f"self.metrics_output_path: {self.metrics_output_path}\n"
-        output_string += f"self.logger_output_path: {self.logger_output_path}\n"
-
+        output_string = f"self.download_index: {self.download_index}\n"
+        output_string += f"self.download_possible: {self.download_possible}\n"
+        output_string += f"self.upload_index: {self.upload_index}\n"
+        output_string += f"self.s3_upload_root: {self.s3_upload_root}\n"
+        output_string += f"self.s3_download_root {self.s3_download_root}\n"
+        output_string += f"self.metrics_upload_path: {self.metrics_upload_path}\n"
+        output_string += f"self.model_upload_path: {self.model_upload_path}\n"
+        output_string += f"self.logger_upload_path: {self.logger_upload_path}\n"
+        output_string += f"self.metrics_download_path: {self.metrics_download_path}\n"
+        output_string += f"self.model_download_path: {self.model_download_path}\n"
+        output_string += f"self.logger_download_path: {self.logger_download_path}\n"
         return output_string
         
 

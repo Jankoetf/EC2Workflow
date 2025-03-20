@@ -14,5 +14,8 @@ my_virtual_environment/
 #env
 .env
 
-#logger_output
+#Local output
 logger_output
+LocalOutput
+TestFiles
+
