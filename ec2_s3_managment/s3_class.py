@@ -12,7 +12,6 @@ from ec2_s3_managment.logger_config import logger
 load_dotenv(".env")
 S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
 
-
 class S3ManagerClass:
     def __init__(self):
         self.s3_client = boto3.client('s3')
@@ -26,7 +25,7 @@ class S3ManagerClass:
     
     def update_download_paths(self):
         self.download_index, self.download_possible = self.get_max_output_index()
-        self.s3_download_root = f"{S3_PREFIX}_{self.download_index}" if self.download_possible else None
+        self.s3_download_root = f"{S3_PREFIX}_{self.download_index}" if self.download_possible else "not_possible"
         self.model_download_path = self.s3_download_root + f"/{MODEL_FILENAME}.joblib"
         self.metrics_download_path = self.s3_download_root + f"/{METRICS_FILENAME}.json"
         self.logger_download_path = self.s3_download_root + f"/{LOGGER_FILENAME}.log"
@@ -67,11 +66,11 @@ class S3ManagerClass:
             print(f"Error uploading file: {e}")
             raise
     
-    def upload_model_to_s3(self):
+    def upload_model_to_s3(self, model):
         try:    
             # Serialize the model to a bytes buffer in memory
             model_buffer = io.BytesIO()
-            joblib.dump(self.model, model_buffer)
+            joblib.dump(model, model_buffer)
             model_buffer.seek(0)  # Reset buffer position to beginning
             
             # Upload the model directly from memory to S3
@@ -150,6 +149,11 @@ class S3ManagerClass:
                 s3_key,
                 local_path
             )
+    
+    
+    def load_model_localy(self):
+        loaded_model = joblib.load(LOCAL_OUTPUT_PATH + "/" + S3_PREFIX + "_" + str(self.download_index)+ "/" + MODEL_FILENAME + ".joblib")
+        return loaded_model
 
     def __str__(self):
         output_string = f"self.download_index: {self.download_index}\n"
