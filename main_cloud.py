@@ -1,4 +1,3 @@
-from ec2_s3_managment.ec2_class import Ec2ManagerClass
 from ec2_s3_managment.s3_class import S3ManagerClass
 from model.load_data import LoaderClass
 from model.model_class import ModelClass

@@ -73,6 +73,10 @@ def run_cloud_training_pipeline():
 
 def download_experiment_data_and_evaluate_model():
     s3_manager_instance = S3ManagerClass()
+    if not s3_manager_instance.download_possible:
+        print("nothing to download")
+        return
+
     loader_instance = LoaderClass()
     
     # Load train test data
