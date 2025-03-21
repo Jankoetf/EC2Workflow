@@ -53,6 +53,7 @@ class Ec2ManagerClass:
             InstanceType = 't2.micro',
             UserData=user_data,
             KeyName = EC2_KEY_NAME,
+            InstanceInitiatedShutdownBehavior='terminate',
             BlockDeviceMappings = [
                 {
                     "DeviceName": "/dev/xvda",
@@ -171,7 +172,7 @@ class Ec2ManagerClass:
                 break
             except ClientError as e:
                 wait_period = 30
-                print(f"waiting for {wait_period} ms")
+                print(f"waiting for {wait_period} seconds")
                 time.sleep(wait_period)
         else:
             raise RuntimeError("Failed to associate instance profile after multiple retries")
