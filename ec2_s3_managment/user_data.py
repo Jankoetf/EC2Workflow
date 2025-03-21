@@ -6,4 +6,5 @@ systemctl enable docker
 docker pull jankoi/model-training:latest
 sleep 60
 docker run jankoi/model-training:latest
+shutdown -h now
 """
