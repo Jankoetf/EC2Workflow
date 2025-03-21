@@ -1,11 +1,16 @@
 import boto3
 import os
 import time
-from ec2_s3_managment.ec2_s3_constants import KEY_DIR, INSTANCE_AMI, SECURITY_GROUP_NAME, DESCIPTION, EC2_KEY_NAME
+import json
+from botocore.exceptions import ClientError
+
+from ec2_s3_managment.ec2_s3_constants import (KEY_DIR, INSTANCE_AMI, SECURITY_GROUP_NAME, DESCIPTION, EC2_KEY_NAME, ROLE_NAME)
+from ec2_s3_managment.user_data import user_data
 
 class Ec2ManagerClass:
     def __init__(self):
         self.ec2_client = boto3.client('ec2')
+        self.iam_client = boto3.client('iam')
     
     # key pair creation
     def __create_new_key_pair(self):
@@ -46,6 +51,7 @@ class Ec2ManagerClass:
             MinCount = 1,
             MaxCount = 1,
             InstanceType = 't2.micro',
+            UserData=user_data,
             KeyName = EC2_KEY_NAME,
             BlockDeviceMappings = [
                 {
@@ -73,6 +79,8 @@ class Ec2ManagerClass:
 
         security_group_id = self.__create_security_group()
         self.ec2_client.modify_instance_attribute(InstanceId = instance_id, Groups=[security_group_id])
+
+        self.__ensure_s3_role(instance_id)
 
         return instance_id #important, we need this for termination, or stoping...
     
@@ -113,6 +121,66 @@ class Ec2ManagerClass:
             ]
         )
         return security_group_id
+    
+    def __ensure_s3_role(self, instance_id):
+        role_name = ROLE_NAME
+        trust_policy = {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "ec2.amazonaws.com"},
+                "Action": "sts:AssumeRole"
+            }]
+        }
+        s3_policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+
+        try:
+            response = self.iam_client.get_role(RoleName=role_name)
+            print(f"IAM role '{role_name}' already exists")
+        except ClientError as e:
+            response = self.iam_client.create_role(
+                RoleName=role_name,
+                AssumeRolePolicyDocument=json.dumps(trust_policy),
+                Description="EC2 role granting full S3 access"
+            )
+            print(f"Created IAM role '{role_name}'")
+            self.iam_client.attach_role_policy(RoleName=role_name, PolicyArn=s3_policy_arn)
+            print(f"Attached policy {s3_policy_arn} to '{role_name}'")
+
+        role_arn = response["Role"]["Arn"]
+        print("Role ARN:", role_arn)
+
+        instance_profile_name = role_name
+        try:
+            self.iam_client.get_instance_profile(InstanceProfileName=instance_profile_name)
+        except ClientError as e:
+            self.iam_client.create_instance_profile(InstanceProfileName=instance_profile_name)
+            self.iam_client.add_role_to_instance_profile(
+                InstanceProfileName=instance_profile_name,
+                RoleName=role_name
+            )
+
+        instance_profile = self.iam_client.get_instance_profile(InstanceProfileName=instance_profile_name)['InstanceProfile']
+        instance_profile_arn = instance_profile['Arn']
+        for _ in range(10):
+            try:
+                self.ec2_client.associate_iam_instance_profile(
+                    InstanceId=instance_id,
+                    IamInstanceProfile={'Arn': instance_profile_arn}
+                )
+                break
+            except ClientError as e:
+                wait_period = 30
+                print(f"waiting for {wait_period} ms")
+                time.sleep(wait_period)
+        else:
+            raise RuntimeError("Failed to associate instance profile after multiple retries")
+
+        # self.ec2_client.associate_iam_instance_profile(
+        #     IamInstanceProfile={'Name': instance_profile_name},
+        #     InstanceId=instance_id
+        # )
+        print(f"Associated Instance Profile '{instance_profile_name}' with EC2 {instance_id}")
     
     #status, start, stop, delete
     def wait_for_instance_target_status(self, instance_id, target_status):
