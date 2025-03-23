@@ -4,7 +4,12 @@ from model.model_class import ModelClass
 from ec2_s3_managment.logger_config import logger
 
 def run_cloud_training_pipeline():
-    """Main function to execute the full training pipeline - cloud version"""
+    """
+    Main function to execute the full training pipeline - cloud version
+    This will be dockerized and it will run on EC2
+    Model, Metrics, and Logger will be saved on S3 bucket
+    """
+    
     logger.info(f"=== Starting model training pipeline ===")
     s3_manager_instance = S3ManagerClass()
     loader_instance = LoaderClass()

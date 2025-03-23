@@ -4,7 +4,16 @@ from model.model_class import ModelClass
 from ec2_s3_managment.logger_config import logger
 
 def run_local_training_pipeline():
-    """Main function to execute the full training pipeline - local version"""
+    """
+    Main function to execute the full training pipeline - local version
+    This function tests the whole process:
+        - loading data
+        - model training,
+        - model evaluation
+        - uploading model metrics and logs to S3, dowloading model
+        - downloading model metrics and logs localy
+        - evaluating downloaded and loaded model
+    """
     logger.info(f"=== Starting model training pipeline ===")
     s3_manager_instance = S3ManagerClass()
     loader_instance = LoaderClass()
@@ -36,6 +45,11 @@ def run_local_training_pipeline():
     logger.info(f"=== Logger END ===\n\n")
 
 def download_experiment_data_and_evaluate_model():
+    """
+    downloads newest folder from S3 bucket, loads and evaluates the model
+
+    this function is used after main.py finish running
+    """
     s3_manager_instance = S3ManagerClass()
     if not s3_manager_instance.download_possible:
         print("nothing to download")
