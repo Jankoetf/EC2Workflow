@@ -4,7 +4,7 @@ from model.model_class import ModelClass
 from ec2_s3_managment.logger_config import logger
 
 def run_cloud_training_pipeline():
-    """Main function to execute the full training pipeline."""
+    """Main function to execute the full training pipeline - cloud version"""
     logger.info(f"=== Starting model training pipeline ===")
     s3_manager_instance = S3ManagerClass()
     loader_instance = LoaderClass()

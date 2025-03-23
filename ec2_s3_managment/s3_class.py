@@ -31,6 +31,12 @@ class S3ManagerClass:
         self.logger_download_path = self.s3_download_root + f"/{LOGGER_FILENAME}.log"
 
     def get_max_output_index(self):
+        """
+        If last folder_name where we dumped our model and metrics was: Output_3, automaticaly
+        new folder Output_4 will be created when we want to save new model and metrics...
+
+        this function just finds Output_i name with biggest index, and returns it
+        """
         try:
             response = self.s3_client.list_objects_v2(
                 Bucket=S3_BUCKET_NAME,
@@ -68,10 +74,9 @@ class S3ManagerClass:
     
     def upload_model_to_s3(self, model):
         try:    
-            # Serialize the model to a bytes buffer in memory
             model_buffer = io.BytesIO()
             joblib.dump(model, model_buffer)
-            model_buffer.seek(0)  # Reset buffer position to beginning
+            model_buffer.seek(0) 
             
             # Upload the model directly from memory to S3
             logger.info(f"Uploading model to S3 bucket {S3_BUCKET_NAME}, key: {self.s3_upload_root}/{MODEL_FILENAME}")
@@ -105,7 +110,6 @@ class S3ManagerClass:
         
     def upload_log_to_s3(self):
         try:
-            # If log_content is a file path, upload the file
             self.s3_client.upload_file(
                 LOGGER_OUT_PATH,
                 S3_BUCKET_NAME,
@@ -118,6 +122,9 @@ class S3ManagerClass:
         
 
     def download_experiment_files_from_s3(self):
+        """
+        downloads all files from last created folder with model and metrics in S3_BUCKET_NAME bucket
+        """
         self.update_download_paths()
         if not self.download_possible:
             print("no output file")
