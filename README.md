@@ -106,9 +106,9 @@ To truly customize this project for your specific machine learning needs, you'll
 
 - Modify your model architecture and datasets in the [model/](./model/) file to implement your specific neural network or machine learning algorithm ([model_class.py](./model/model_class.py)), and corresponding [load_data.py](./model/load_data.py) script
 
-- Modify [dockerfile](./dockerfile), currenty you are using my public image...
+- Modify [dockerfile](./dockerfile)
 
-- Build a new Docker image with your changes:
+- Build a new Docker image with your changes (currenty you are using my public image...):
 
   ```
   docker build -t yourusername/your-model-name:latest .
