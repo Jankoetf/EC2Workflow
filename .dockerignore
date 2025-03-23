@@ -21,7 +21,14 @@ venv/
 .git/
 .gitignore
 
-# Local
+# Local files
 logger_output/
 LocalOutput/
 TestFiles/
+
+# scripts
+main.py
+main_local.py
+
+#env
+.env.example
